@@ -1,4 +1,5 @@
 import os
+import sys
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -6,7 +7,10 @@ from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
 
 # === CONFIG ===
-deg_path = r"C:\Users\sara.hrabovska\OneDrive - MultiplexDX, s.r.o\Dokumenty\Code\AIpredict\GSEA Visium\MDX_3007_histochoice\3007 histochoice kmeans4 DEGs GEX.xlsx"
+#first argument - input xlsx file
+INPUT_FILE = sys.argv[1]
+
+deg_path = INPUT_FILE
 clusters = [1, 2, 3, 4]
 gene_set_names = ["Hallmark", "GO_BP", "GO_MF", "GO_CC", "C8"]
 
