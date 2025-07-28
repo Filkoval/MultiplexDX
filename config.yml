@@ -1,0 +1,3 @@
+"xlsx_url": "./MDX_3007_histochoice/3007 histochoice kmeans4 DEGs GEX.xlsx"
+"clusters": 4
+"gene_set_names" : ["Hallmark", "GO_BP", "GO_MF", "GO_CC", "C8"]
