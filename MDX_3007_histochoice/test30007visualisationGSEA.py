@@ -16,7 +16,8 @@ import yaml
 # -----------------------------------------
 # Read data
 INPUT_FILE = sys.argv[1]
-os.chdir("../../")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(BASE_DIR,"../"))
 print(str(os.getcwd()))
 with open(INPUT_FILE, 'r', encoding='utf-8') as f:
     data = yaml.safe_load(f)
@@ -35,6 +36,7 @@ gsea_outdir_base = os.path.join(deg_folder, "results")  # <- updated path to mat
 def load_gene_set(): #load gene set from file
     fpath = f"{sample_name}_GSEA_summary_{gs_name}_all_clusters.csv"
     summary_csv_path = os.path.join(gsea_outdir_base, fpath)
+    print(summary_csv_path)
     if not os.path.exists(summary_csv_path):
         print(f"⚠️ Summary CSV not found for {gs_name}, skipping: {summary_csv_path}")
         return None
