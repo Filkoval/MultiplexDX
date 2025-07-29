@@ -7,6 +7,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
 import yaml
 
+
 # === CONFIG ===================================================
 # first argument - ptah to YAML config file in following format:
 # -----------------------------------------
@@ -22,6 +23,7 @@ print(str(os.getcwd()))
 with open(INPUT_FILE, 'r', encoding='utf-8') as f:
     data = yaml.safe_load(f)
 # ==============================================================
+
 
 deg_path = data["xlsx_url"]
 clusters = [(i+1) for i in range(int(data["clusters"]))]

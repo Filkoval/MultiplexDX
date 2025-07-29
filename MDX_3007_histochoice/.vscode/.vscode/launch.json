@@ -6,12 +6,20 @@
     "configurations": [
 
         {
-            "name": "Python Debugger: Current File",
+            "name": "Python Debugger: test30007visualisationGSEA",
             "type": "debugpy",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
             "args": ["C:\\Users\\filko\\MultiplexDX\\config.yml"]
+        }
+        {
+            "name": "Python Debugger: test3007GSEA",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": ["C:\\Users\\filko\\MultiplexDX\\config_3007.yml"]
         }
     ]
 }
