@@ -1,0 +1,22 @@
+name: ecotyper_env
+channels:
+  - defaults
+  - conda-forge
+  - r
+  - bioconda
+dependencies:
+  - python=3.9
+  - r-base=4.1.0
+  - r-NMF>=0.21.0
+  - r-rcolorbrewer>=1.1.2
+  - r-cluster>=2.1.0
+  - r-circlize>=0.4.10
+  - r-cowplot>=1.1.0
+  - r-doParallel>=1.0.15
+  - r-ggplot2>=3.3.2
+  - r-reshape2>=1.4.4
+  - r-viridis>=0.5.1
+  - r-config>=0.3.1
+  - r-argparse>=2.0.3
+  - r-colorspace>=1.4.1
+  - r-plyr=1.8.6
