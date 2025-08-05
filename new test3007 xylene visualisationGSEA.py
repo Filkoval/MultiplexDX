@@ -29,7 +29,7 @@ for gs_name in gene_set_names:
     df = pd.read_csv(summary_csv_path)
 
     # Validate columns exist
-    required_cols = {'Term', 'NES', 'NOM p-val', 'Cluster'}
+    required_cols = {'Term', 'NES', 'FDR q-val', 'Cluster'}
     if not required_cols.issubset(df.columns):
         print(f"⚠️ Missing columns in {gs_name} summary CSV, skipping.")
         continue
@@ -41,7 +41,7 @@ for gs_name in gene_set_names:
 
         # Pivot to create NES and p-value matrices
         nes_df = df.pivot(index='Term', columns='Cluster', values='NES')
-        pval_df = df.pivot(index='Term', columns='Cluster', values='NOM p-val')
+        pval_df = df.pivot(index='Term', columns='Cluster', values='FDR q-val')
 
         # Filter: keep terms significant in at least one cluster
         fdr_df = df.pivot(index='Term', columns='Cluster', values='FDR q-val')
