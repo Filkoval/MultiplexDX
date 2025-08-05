@@ -49,7 +49,7 @@ def load_gene_set(): #load gene set from file
 
 
 def column_exist(): # Validate columns exist
-    required_cols = {'Term', 'NES', 'NOM p-val', 'Cluster'}
+    required_cols = {'Term', 'NES', 'FDR q-val', 'Cluster'}
     if not required_cols.issubset(df.columns):
         print(f"⚠️ Missing columns in {gs_name} summary CSV, skipping.")
         return False
@@ -60,10 +60,10 @@ def Reshape():
         
     # Pivot to create NES and p-value matrices
     nes_df = df.pivot(index='Term', columns='Cluster', values='NES') # enrichment score
-    pval_df = df.pivot(index='Term', columns='Cluster', values='NOM p-val') # possibility of random statistical closenss
+    pval_df = df.pivot(index='Term', columns='Cluster', values='FDR q-val') # possibility of random statistical closenss
 
     # Filter: keep terms significant in at least one cluster
-    sig_terms = pval_df.lt(0.05).any(axis=1) #filteras out stochaistic genes
+    sig_terms = pval_df.lt(0.25).any(axis=1) #filteras out stochaistic genes
     nes_df = nes_df.loc[sig_terms] # filtering rows based on True/False series above 
     pval_df = pval_df.loc[sig_terms]
 
@@ -93,7 +93,7 @@ def define_clusters(nes_df,pval_df):
     pval_df = pval_df[clusters]
 
     # Recreate annotation stars AFTER cleanup
-    annot_df = pval_df.map(lambda x: "*" if x < 0.05 else "")
+    annot_df = pval_df.map(lambda x: "*" if x < 0.25 else "")
 
     # Check for enough data for clustering
     if nes_df.shape[0] < 2 or nes_df.shape[1] < 2:
@@ -123,7 +123,7 @@ def graph_design():
 
 def draw_graphs():
 
-    plt.suptitle(f"{gs_name} Gene Set Enrichment (NES, p < 0.05)", y=1.02, fontsize=10)
+    plt.suptitle(f"{gs_name} Gene Set Enrichment (NES, filtered by FDR q-value < 0.25)", y=1.02, fontsize=10)
     pdf.savefig(graph_design().figure, bbox_inches='tight')
     plt.close(graph_design().figure)
 
