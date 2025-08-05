@@ -20,6 +20,7 @@ INPUT_FILE = sys.argv[1]
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 os.chdir(os.path.join(BASE_DIR,"../"))
 print(str(os.getcwd()))
+print(INPUT_FILE, sys.argv[1])
 with open(INPUT_FILE, 'r', encoding='utf-8') as f:
     data = yaml.safe_load(f)
 # ==============================================================
