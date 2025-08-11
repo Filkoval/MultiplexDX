@@ -42,6 +42,14 @@ seurat_obj@meta.data$highlight <- factor(seurat_obj@meta.data$highlight, levels 
 Idents(seurat_obj) <- "highlight"
 cluster_name<-paste0("Cluster-", CLUSTER)
 
+#new_img <- Read10X_Image(
+#  image.dir = "path/to/new/image",
+#  filter.matrix = TRUE
+#)
+
+# Priradiť ho namiesto starého
+#seurat_obj@images[["slice1"]] <- new_img
+
 # ========= PLOT ========
 cols <- c(
    cluster_name= "#440024ff",
@@ -71,54 +79,6 @@ cols.highlight = c("#DE2D26", "grey50"),
 ggsave(OUTPUT_TIS, plot = plot1)
 ggsave(OUTPUT_NO, plot = plot2)
 
-#CROP PICTURE
-crop <- function(
-)
-{
-  img <- image_read(paste0(DIR,"\\annotation.png"))
-  path =  paste0(DIR,"/spatial/tissue_positions.csv")
-  csv_file <- read.csv(path, header = TRUE, sep = ",")
-  
-  up <- min(csv_file$array_row, na.rm = TRUE)
-  left <- min(csv_file$array_col, na.rm = TRUE)
-  down <- max(csv_file$array_row, na.rm = TRUE)
-  right <- max(csv_file$array_col, na.rm = TRUE)
 
-  print(down)
-
-  up_left <- (csv_file[csv_file$array_row == up & csv_file$array_col == left, ])
-  down_right <- (csv_file[csv_file$array_row == down & csv_file$array_col == right, ])
-
-
-  info <- image_info(image_read(paste0(DIR,"\\annotation.png")))
-  scale_x <- info$width / 11350
-  scale_y <- info$height / 19290
-
-  x=21097*scale_x
-  y=20564*scale_y
-
-  # Definuj rohy (napr. ľavý horný = 50,50; pravý dolný = 250,350)
-  x1 <- (down_right$pxl_col_in_fullres)*scale_x
-  y1 <-  (down_right$pxl_row_in_fullres)*scale_y
-  x2 <- (up_left$pxl_col_in_fullres)*scale_x
-  y2 <- (up_left$pxl_row_in_fullres)*scale_y
-
-  #3007 xylene5_Scan1 (4,w=11350, h=19290
-  
-  
-
-  # Vypočítaj šírku, výšku a posun
-  w <- round(x2 - x1 + 1)
-  h <- round(y2 - y1 + 1)
-  ox <- round(x1-x)
-  oy <- round(y1-y)
-
-
-  # Orez v magick (geometria: "wxh+ox+oy")
-  img <- image_crop(img,geometry = sprintf("%dx%d+%d+%d", w, h, ox, oy))
-  print(img)
-  image_write(img,, path = paste0(OUTPUT_ANNOT))
-}
-crop()
 
 
