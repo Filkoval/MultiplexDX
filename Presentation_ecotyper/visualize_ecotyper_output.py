@@ -22,7 +22,7 @@ POINT_SIZES = [6,5,8,6]
 
 
 # ======== CREATES OUTPUT DIRECTORY FOR PLOTS =========
-def cerate_output_dir():
+def create_output_dir():
     path = os.path.join(DIR,"plots")
     if os.path.exists(path) and os.path.isdir(path):
         answear = input("Directory plots already exists, do you wish to override it? (y|n)")
@@ -33,7 +33,7 @@ def cerate_output_dir():
             print("saving to /plots additionaly, warning! : may cause overlap of plots with the same name.")
             create_presentation()
             sys.exit()
-        else: cerate_output_dir()
+        else: create_output_dir()
     else: os.makedirs(path)
 
 
@@ -237,8 +237,12 @@ def create_presentation():
     odd = 0
     prs = Presentation(os.path.join(DIR,"template.pptx"))
     samples = os.listdir(os.path.join(DIR,"plots"))
-    placeholder_order = [14,13,15,18,17,19]
-    sample_order = [12,16]
+    placeholder_order = [18,17,19,14,13,15]
+    sample_order = [16,12]
+
+    for shape in prs.slide_layouts[12].placeholders:
+            phf = shape.placeholder_format
+            print(f"Index: {phf.idx}, Typ: {phf.type}")
 
     for sample in samples:
 
@@ -266,7 +270,7 @@ def create_presentation():
 # ============ MAIN ==============
 if input_ok():
     j = 0
-    cerate_output_dir()
+    create_output_dir()
     file_dic = create_dic()
     for sample in file_dic.keys():
         cluster_dic = {}
