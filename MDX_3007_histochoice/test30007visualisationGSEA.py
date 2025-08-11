@@ -59,7 +59,7 @@ def column_exist(): # Validate columns exist
 
 def Reshape():
         
-    # Pivot to create NES and p-value matrices
+    # Pivot to create NES and FDR q-val matrices
     nes_df = df.pivot(index='Term', columns='Cluster', values='NES') # enrichment score
     pval_df = df.pivot(index='Term', columns='Cluster', values='FDR q-val') # possibility of random statistical closenss
 
