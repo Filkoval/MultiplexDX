@@ -8,13 +8,7 @@ invisible(lapply(required_pkgs, function(pkg) {
   suppressPackageStartupMessages(library(pkg, character.only = TRUE))
 }))
 
-DIR = "C:\\MultiplexDX-local\\Presentation_ecotyper\\Space_ranger-3007x"
-FILE = "C:\\MultiplexDX-local\\Presentation_ecotyper\\Space_ranger-3007x\\analysis\\clustering\\gene_expression_kmeans_4_clusters\\clusters.csv"
-CLUSTER = 3
-OUTPUT_TIS = 'C:\\MultiplexDX-local\\Presentation_ecotyper\\plots\\3007x\\sample_3007x_cluster_1\\3007x_tissue_1.pdf'
-OUTPUT_NO = 'C:\\MultiplexDX-local\\Presentation_ecotyper\\plots\\3007x\\sample_3007x_cluster_1\\3007x_no_tissue_1.pdf'
-OUTPUT_ANNOT = 'C:\\MultiplexDX-local\\Presentation_ecotyper\\plots\\3007x\\sample_3007x_cluster_1\\3007x_annot_1.png'
-POINT = 6
+
 
 DIR = args[1] 
 FILE = args[2]
@@ -42,14 +36,6 @@ seurat_obj@meta.data$highlight <- factor(seurat_obj@meta.data$highlight, levels 
 Idents(seurat_obj) <- "highlight"
 cluster_name<-paste0("Cluster-", CLUSTER)
 
-#new_img <- Read10X_Image(
-#  image.dir = "path/to/new/image",
-#  filter.matrix = TRUE
-#)
-
-# Priradiť ho namiesto starého
-#seurat_obj@images[["slice1"]] <- new_img
-
 # ========= PLOT ========
 cols <- c(
    cluster_name= "#440024ff",
@@ -76,9 +62,37 @@ image.alpha = 0,
 cols.highlight = c("#DE2D26", "grey50"),
 ) + NoLegend()
 
+# =========== UMAP =============
+seurat_obj <- SetAssayData( #Adds default count for SCT
+    seurat_obj,
+    assay    = "Spatial",                        
+    layer    = "counts",                     
+    new.data = seurat_obj@assays$Spatial@layers[["counts.Gene Expression"]]
+  )
+
+umap_df <- read.csv(paste0(DIR,"/analysis/umap/gene_expression_2_components/projection.csv"))
+kmeans_df <- read.csv(FILE)
+
+merged_df <- merge(umap_df, kmeans_df, by.x = "Barcode", by.y = "Barcode")
+merged_df <- merged_df[match(colnames(seurat_obj), merged_df$Barcode), ]
+seurat_obj$kmeans_cluster <- as.factor(merged_df$Cluster)
+umap_mat <- as.matrix(merged_df[, c("UMAP.1", "UMAP.2")])
+
+rownames(umap_mat) <- merged_df$Barcode
+umap_mat <- umap_mat[colnames(seurat_obj), ]
+
+seurat_obj[["umap_spaceranger"]] <- CreateDimReducObject(
+  embeddings = umap_mat,
+  key = "UMAPSR_",
+  assay = DefaultAssay(seurat_obj)
+)
+
+seurat_obj$kmeans_cluster <- as.factor(merged_df$Cluster)
+plotik <- DimPlot(seurat_obj, reduction = "umap_spaceranger", group.by = "kmeans_cluster", label = TRUE) +
+  ggtitle("SpaceRanger UMAP s K-means klastrami")
+
 ggsave(OUTPUT_TIS, plot = plot1)
 ggsave(OUTPUT_NO, plot = plot2)
-
-
-
+ggsave(paste0(DIR, "/UMAP.pdf"), plot = plotik)
+print("konec")
 

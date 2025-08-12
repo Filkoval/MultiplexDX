@@ -8,6 +8,8 @@ import shutil
 import fitz 
 from pptx import Presentation
 from PIL import Image
+from sklearn.cluster import DBSCAN
+
 
 # ======= DATA LOADING ========
 DIR = sys.argv[1]
@@ -19,6 +21,7 @@ CLUSTERS = 4
 ECOTYPES = ["CE"+str(i) for i in range(1,11)]
 ATTEMPTS = 10
 POINT_SIZES = [6,5,8,6]
+PATH = os.getcwd()
 
 
 # ======== CREATES OUTPUT DIRECTORY FOR PLOTS =========
@@ -119,10 +122,11 @@ def draw_spatial(file_dic,name,cluster,path,point):
     no_tissue_png = os.path.join(path,str(name+"_no_tissue_"+str(cluster)+".png"))
     no_tissue_pdf = os.path.join(path,str(name+"_no_tissue_"+str(cluster)+".pdf"))
 
+
     subprocess.run(
         [
             "Rscript",
-            DIR+"\\spatial_plot.r",
+            PATH+"\\spatial_plot.r",
             file_dic[sample][2],
             file_dic[sample][0],
             str(cluster),
@@ -132,7 +136,7 @@ def draw_spatial(file_dic,name,cluster,path,point):
         ],
         capture_output=True,    
         text=True,
-        cwd=DIR, 
+        cwd=PATH, 
         ) 
     
     convert_to_png(tissue_pdf,tissue_png)
@@ -218,8 +222,9 @@ def create_graphs(name, cluster,point):
     pie = draw_pie(values,sample,i+1,path)
     annot_file = [f for f in ANNOTATION_FILES if f.startswith("annot-"+name)][0]
     if len(annot_file) == 0: return False
-    spatial = draw_spatial(file_dic,name,cluster,path,point)
+    draw_spatial(file_dic,name,cluster,path,point)
     crop_annot(annot_file, name)
+    return True
 
 
 # ====== WRITE IN PRESENTATION =========
@@ -239,10 +244,6 @@ def create_presentation():
     samples = os.listdir(os.path.join(DIR,"plots"))
     placeholder_order = [18,17,19,14,13,15]
     sample_order = [16,12]
-
-    for shape in prs.slide_layouts[12].placeholders:
-            phf = shape.placeholder_format
-            print(f"Index: {phf.idx}, Typ: {phf.type}")
 
     for sample in samples:
 
@@ -267,6 +268,19 @@ def create_presentation():
         
     prs.save(os.path.join(DIR,"vystupna_prezentacia.pptx"))
 
+# =========== CLUSTER CALCULATION ===========
+def calc_clusters(sample):
+    umap = pd.read_csv(os.path.join(DIR,"Space_ranger-"+sample,"analysis","umap","gene_expression_2_components","projection.csv"))
+    dbscan = DBSCAN(eps=0.75, min_samples=85)
+    umap_values = umap[["UMAP-1","UMAP-2"]]
+    clusters_np = dbscan.fit_predict(umap_values.values)
+
+    clusters_df = pd.DataFrame()
+    clusters_df["Barcode"] = umap["Barcode"]
+    clusters_df["Cluster"] = clusters_np
+    print(clusters_df['Cluster'].value_counts())
+    return clusters_df
+
 # ============ MAIN ==============
 if input_ok():
     j = 0
@@ -276,10 +290,14 @@ if input_ok():
         cluster_dic = {}
         os.makedirs(os.path.join(DIR,"plots",sample))
         clusters_df = pd.read_csv(file_dic[sample][0])
+        #cluster_df = calc_clusters(sample)
+
         ecotypes_df = pd.read_csv(file_dic[sample][1], sep='\t')
         ecotypes_df['ID'] = ecotypes_df['ID'].str.replace('.1', '-1', regex=False)
         for i in range(CLUSTERS):
             cluster_dic[i+1] = filter_barcode(i+1,clusters_df)
+            
+            #cluster_dic[i+1] = filter_barcode(i,cluster_df)
             sum_series = ecotypes_df[ecotypes_df["ID"].isin(cluster_dic[i+1])].sum()
             sum_ecotypes = sum_series[sum_series.index.isin(ECOTYPES)].sum()
             values = [sum_series[ecotype]/sum_ecotypes for ecotype in ECOTYPES]
@@ -287,3 +305,4 @@ if input_ok():
         print("All charts for sample: "+sample+" have been generated")
         j+=1
     create_presentation()
+
