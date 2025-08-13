@@ -2,7 +2,7 @@ import pandas as pd
 import sys
 import os
 import matplotlib.pyplot as plt
-import seaborn as sns
+from seaborn import color_palette
 import subprocess
 import shutil
 import fitz 
@@ -10,7 +10,13 @@ from pptx import Presentation
 from PIL import Image
 from sklearn.cluster import DBSCAN
 import hdbscan
+import umap.plot
+import scanpy as sc
+import umap.umap_ as _um
+import numpy as np
+from sklearn.metrics import silhouette_score
 
+UMAP = _um.UMAP
 
 # ======= DATA LOADING ========
 DIR = sys.argv[1]
@@ -97,7 +103,7 @@ def filter_barcode(cluster, df):
 
 # ====== PIE CHART ======
 def draw_pie(values,name,cluster,path):
-    palette = sns.color_palette("pastel", len(values))
+    palette = color_palette("pastel", len(values))
     filename = "piechart-"+name+"_"+str(cluster)+".png"
     pie_name = os.path.join(path,filename)
     plt.pie(
@@ -116,7 +122,7 @@ def draw_pie(values,name,cluster,path):
 
 
 # ======= SPATIAL GRAPH ======== 
-def draw_spatial(file_dic,name,cluster,path,point):
+def draw_spatial(file_dic,name,cluster,path,point,cluster_csv):
 
     tissue_png = os.path.join(path,str(name+"_tissue_"+str(cluster)+".png"))
     tissue_pdf = os.path.join(path,str(name+"_tissue_"+str(cluster)+".pdf"))
@@ -129,11 +135,13 @@ def draw_spatial(file_dic,name,cluster,path,point):
             "Rscript",
             PATH+"\\spatial_plot.r",
             file_dic[sample][2],
-            file_dic[sample][0],
+            cluster_csv,
+            #file_dic[sample][0],
             str(cluster),
             tissue_pdf,
             no_tissue_pdf,
             str(POINT_SIZES[point]),
+            cluster_csv
         ],
         capture_output=True,    
         text=True,
@@ -216,14 +224,14 @@ def crop_annot(inimg,name):
 
 
 # ======= CREATE SET OF GRAPHS ==========
-def create_graphs(name, cluster, point):
+def create_graphs(name, cluster,point,cluster_csv,values):
     dirname = "sample_" + name + "_cluster_" + str(cluster)
     path = os.path.join(DIR,"plots",sample,dirname)
     os.makedirs(path)
     pie = draw_pie(values,sample,i+1,path)
     annot_file = [f for f in ANNOTATION_FILES if f.startswith("annot-"+name)][0]
     if len(annot_file) == 0: return False
-    draw_spatial(file_dic,name,cluster,path,point)
+    draw_spatial(file_dic,name,cluster,path,point,cluster_csv)
     crop_annot(annot_file, name)
     return True
 
@@ -285,17 +293,78 @@ def calc_clusters(sample):
 
 # =========== CLUSTER CALCULATION HDBSCAN ===========
 def calc_hclusters(sample):
+    min_cluster_sizes = range(5, 21, 2)
+    num_clusters = []
+    scores = []
+
+
     umap = pd.read_csv(os.path.join(DIR,"Space_ranger-"+sample,"analysis","umap","gene_expression_2_components","projection.csv"))
     umap_values = umap[["UMAP-1","UMAP-2"]]
 
-    clusterer = hdbscan.HDBSCAN(min_cluster_size=18)
-    clusters_np = clusterer.fit_predict(umap_values.values)
+    umap_values = umap[["UMAP-1", "UMAP-2"]].values  # čisto numerické hodnoty
 
-    clusters_df = pd.DataFrame()
-    clusters_df["Barcode"] = umap["Barcode"]
-    clusters_df["Cluster"] = clusters_np
-    print(clusters_df['Cluster'].value_counts())
-    return clusters_df
+    for i in min_cluster_sizes:
+        clusterer = hdbscan.HDBSCAN(min_cluster_size=i)
+        clusters_np = clusterer.fit_predict(umap_values)
+
+        clusters_df = pd.DataFrame({
+            "Barcode": umap["Barcode"],
+            "Cluster": clusters_np
+        })
+
+        labels = clusters_df["Cluster"]
+        num_clusters.append(len(labels.unique()) - 1)  # -1 pre šum
+
+        mask = labels != -1
+        if mask.sum() > 1:
+            score = silhouette_score(umap_values[mask], labels[mask])
+        else:
+            score = 0
+        scores.append(score)
+
+    plt.figure(figsize=(10,4))
+    plt.subplot(1,2,1)
+    plt.plot(min_cluster_sizes, num_clusters, marker='o')
+    plt.xlabel('min_cluster_size')
+    plt.ylabel('Number of clusters')
+    plt.show()
+
+    plt.subplot(1,2,2)
+    plt.plot(min_cluster_sizes, scores, marker='o')
+    plt.xlabel('min_cluster_size')
+    plt.ylabel('Silhouette score')
+    plt.show()
+
+    path = os.path.join(DIR,"Space_ranger-"+sample+".csv")
+    clusters_df.to_csv(path, index=False)
+    return clusters_df,path
+
+
+# ============ DENSE MAP ==========
+class DummyUMAP(UMAP):
+    def pass_func():
+        pass
+    #def __init__(self, embedding,n):
+     #   self.embedding_ = embedding
+      #  self.n_neighbors = n
+
+def calc_dense(sample):
+    adata = sc.read_10x_h5(os.path.join(DIR,"Space_ranger-"+sample,"filtered_feature_bc_matrix.h5"))
+    X = adata.X 
+    
+    my_clusters = calc_hclusters(sample)[0]
+    clusters = my_clusters["Cluster"].to_numpy() 
+
+    file = os.path.join(DIR,"plots","embedd-"+sample+".npy")
+    if(os.path.exists(file)):
+        embedding = np.load(file)
+    else:
+        dens_mapper = UMAP(densmap=True,dens_lambda=0.8, random_state=42).fit(X)
+        np.save(file, dens_mapper.embedding_)
+        embedding = dens_mapper.embedding_
+    dummy = DummyUMAP()
+    dummy.embedding_ = embedding
+    umap.plot.points(dummy, labels=clusters, width=500, height=500)
 
 # ============ MAIN ==============
 if input_ok():
@@ -303,21 +372,21 @@ if input_ok():
     create_output_dir()
     file_dic = create_dic()
     for sample in file_dic.keys():
+        #calc_dense(sample)
         cluster_dic = {}
         os.makedirs(os.path.join(DIR,"plots",sample))
-        clusters_df = pd.read_csv(file_dic[sample][0])
-        #cluster_df = calc_hclusters(sample)
-
+        #clusters_df = pd.read_csv(file_dic[sample][0])
+        cluster_df,cluster_csv = calc_hclusters(sample)
         ecotypes_df = pd.read_csv(file_dic[sample][1], sep='\t')
         ecotypes_df['ID'] = ecotypes_df['ID'].str.replace('.1', '-1', regex=False)
+        CLUSTERS = len(cluster_df["Cluster"].unique()) 
         for i in range(CLUSTERS):
-            cluster_dic[i+1] = filter_barcode(i+1,clusters_df)
-            
-            #cluster_dic[i+1] = filter_barcode(i,cluster_df)
-            sum_series = ecotypes_df[ecotypes_df["ID"].isin(cluster_dic[i+1])].sum()
+            #cluster_dic[i+1] = filter_barcode(i+1,clusters_df)
+            cluster_dic[i-1] = filter_barcode(i-1,cluster_df)
+            sum_series = ecotypes_df[ecotypes_df["ID"].isin(cluster_dic[i-1])].sum()
             sum_ecotypes = sum_series[sum_series.index.isin(ECOTYPES)].sum()
             values = [sum_series[ecotype]/sum_ecotypes for ecotype in ECOTYPES]
-            if not create_graphs(sample,i+1,j): print("File problem - desired annotation not found")
+            if not create_graphs(sample,i-1,j,cluster_csv,values): print("File problem - desired annotation not found")
         print("All charts for sample: "+sample+" have been generated")
         j+=1
     create_presentation()

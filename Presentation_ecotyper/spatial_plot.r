@@ -93,6 +93,6 @@ plotik <- DimPlot(seurat_obj, reduction = "umap_spaceranger", group.by = "kmeans
 
 ggsave(OUTPUT_TIS, plot = plot1)
 ggsave(OUTPUT_NO, plot = plot2)
-ggsave(paste0(DIR, "/UMAP.pdf"), plot = plotik)
+ggsave(paste0(DIR, "/UMAP_HDBS.pdf"), plot = plotik)
 print("konec")
 
